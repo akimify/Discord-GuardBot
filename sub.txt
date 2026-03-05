@@ -1,5 +1,5 @@
-adminPassword=mDyj0Jw5NbFsAqVO
-discordToken=MC4wNzgwNDgwNDcwMjAwMTI3.g1MyVX.HvmD31OcD8I6UNlEueIE0yeXZRb
+adminPassword=pN5MOYVd33GU2jmz
+discordToken=Tu9VMZKznJ6wykhOQFcLfZxd.EaoSXC.z2vhMyWhh9KrBcn7zOS7izEePCn
 prefix=!
 botStatus=offline
 bannedWords=badword1,badword2
