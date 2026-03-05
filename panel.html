@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🛡️ Guardian — Discord Moderation Panel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #080b10;
+      --surface:   #0d1117;
+      --panel:     #111820;
+      --border:    #1e2d3d;
+      --accent:    #00e5ff;
+      --accent2:   #ff4560;
+      --warn:      #ffb300;
+      --ok:        #00e676;
+      --text:      #c9d8e8;
+      --muted:     #4a6070;
+      --font-mono: 'Share Tech Mono', monospace;
+      --font-ui:   'Rajdhani', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-ui);
+      font-size: 15px;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Grid lines background ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background-image:
+        linear-gradient(rgba(0,229,255,.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,255,.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+
+    /* ── Scan-line overlay ── */
+    body::after {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,.07) 2px,
+        rgba(0,0,0,.07) 4px
+      );
+      pointer-events: none;
+    }
+
+    .wrap { position: relative; z-index: 1; max-width: 960px; margin: 0 auto; padding: 0 20px 60px; }
+
+    /* ── Header ── */
+    .hdr {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 24px 0 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 28px;
+    }
+    .hdr-left { display: flex; align-items: center; gap: 14px; }
+    .hdr-logo {
+      width: 46px; height: 46px; border: 2px solid var(--accent);
+      border-radius: 4px; display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 0 14px rgba(0,229,255,.25), inset 0 0 8px rgba(0,229,255,.06);
+      animation: pulse-border 3s ease-in-out infinite;
+    }
+    @keyframes pulse-border {
+      0%,100% { box-shadow: 0 0 14px rgba(0,229,255,.25), inset 0 0 8px rgba(0,229,255,.06); }
+      50%      { box-shadow: 0 0 26px rgba(0,229,255,.5),  inset 0 0 14px rgba(0,229,255,.12); }
+    }
+    .hdr-title { font-size: 22px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #fff; }
+    .hdr-sub   { font-family: var(--font-mono); font-size: 11px; color: var(--muted); letter-spacing: 1px; margin-top: 2px; }
+
+    .status-pill {
+      display: flex; align-items: center; gap: 8px;
+      font-family: var(--font-mono); font-size: 12px;
+      padding: 6px 14px; border-radius: 2px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.03);
+      letter-spacing: 1px;
+    }
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--muted);
+    }
+    .status-pill.online .dot  { background: var(--ok);  box-shadow: 0 0 8px var(--ok); animation: blink 1.4s infinite; }
+    .status-pill.offline .dot { background: var(--accent2); }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    /* ── Auth bar ── */
+    .auth-bar {
+      font-family: var(--font-mono); font-size: 12px;
+      padding: 8px 14px; border-radius: 2px;
+      border-left: 3px solid var(--warn);
+      background: rgba(255,179,0,.06);
+      color: var(--warn); display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .auth-bar.admin { border-color: var(--ok); background: rgba(0,230,118,.06); color: var(--ok); }
+    .auth-bar a { color: inherit; cursor: pointer; text-decoration: underline; }
+
+    /* ── Stat cards ── */
+    .stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 28px; }
+    @media(max-width:640px){ .stats { grid-template-columns: repeat(2,1fr); } }
+
+    .stat-card {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 4px; padding: 16px 18px;
+      position: relative; overflow: hidden;
+    }
+    .stat-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: var(--accent);
+    }
+    .stat-label { font-family: var(--font-mono); font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+    .stat-val   { font-size: 26px; font-weight: 700; color: #fff; line-height: 1; }
+    .stat-icon  { position: absolute; bottom: 10px; right: 14px; font-size: 22px; opacity: .15; }
+
+    /* ── Sections ── */
+    .section {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 4px; margin-bottom: 20px; overflow: hidden;
+    }
+    .section-hdr {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0,229,255,.03);
+    }
+    .section-title {
+      font-size: 13px; font-weight: 700; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--accent);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-body { padding: 20px; }
+
+    /* ── Forms ── */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media(max-width:600px){ .form-grid { grid-template-columns: 1fr; } }
+
+    .fg { display: flex; flex-direction: column; gap: 6px; }
+    .fg.full { grid-column: 1/-1; }
+    label { font-family: var(--font-mono); font-size: 11px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+
+    input[type=text], input[type=password], textarea, select {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 2px; color: var(--text);
+      font-family: var(--font-mono); font-size: 13px;
+      padding: 9px 12px; outline: none; width: 100%;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(0,229,255,.12);
+    }
+    input[readonly], textarea[readonly] { opacity: .5; cursor: not-allowed; }
+    textarea { resize: vertical; min-height: 72px; }
+
+    .input-wrap { position: relative; }
+    .input-wrap input { padding-right: 38px; }
+    .toggle-pw {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer; font-size: 14px; opacity: .6;
+    }
+    .toggle-pw:hover { opacity: 1; }
+
+    .hint { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+
+    /* ── Toggle switches ── */
+    .toggle-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 11px 0; border-bottom: 1px solid var(--border);
+    }
+    .toggle-row:last-child { border-bottom: none; }
+    .toggle-info strong { font-size: 14px; font-weight: 600; color: #fff; display: block; margin-bottom: 2px; }
+    .toggle-info span   { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+
+    .switch { position: relative; display: inline-block; width: 42px; height: 22px; flex-shrink: 0; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; inset: 0; cursor: pointer;
+      background: var(--border); border-radius: 22px;
+      transition: background .2s;
+    }
+    .slider::before {
+      content: ''; position: absolute;
+      width: 16px; height: 16px; left: 3px; bottom: 3px;
+      background: #fff; border-radius: 50%;
+      transition: transform .2s;
+    }
+    .switch input:checked + .slider            { background: var(--accent); }
+    .switch input:checked + .slider::before   { transform: translateX(20px); }
+
+    /* ── Number inputs ── */
+    .num-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+    @media(max-width:500px){ .num-grid { grid-template-columns: 1fr 1fr; } }
+
+    /* ── Buttons ── */
+    .btn-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+    .btn {
+      font-family: var(--font-ui); font-weight: 700; font-size: 13px;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      padding: 10px 22px; border-radius: 2px; border: none;
+      cursor: pointer; transition: all .15s; display: flex; align-items: center; gap: 8px;
+    }
+    .btn:disabled { opacity: .35; cursor: not-allowed; }
+    .btn-primary  { background: var(--accent);  color: #000; }
+    .btn-primary:hover:not(:disabled)  { box-shadow: 0 0 18px rgba(0,229,255,.45); }
+    .btn-danger   { background: var(--accent2); color: #fff; }
+    .btn-danger:hover:not(:disabled)   { box-shadow: 0 0 18px rgba(255,69,96,.45); }
+    .btn-neutral  { background: var(--border);  color: var(--text); }
+    .btn-neutral:hover:not(:disabled)  { background: #2a3d50; }
+    .btn-ghost {
+      background: none; border: 1px solid var(--border);
+      color: var(--muted); padding: 7px 14px; font-size: 12px;
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Logs ── */
+    .log-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 2px; padding: 14px; max-height: 220px; overflow-y: auto;
+      font-family: var(--font-mono); font-size: 12px; line-height: 1.7;
+    }
+    .log-box::-webkit-scrollbar { width: 4px; }
+    .log-box::-webkit-scrollbar-track { background: transparent; }
+    .log-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .log-line { display: flex; gap: 10px; }
+    .log-time { color: var(--muted); flex-shrink: 0; }
+    .log-ok   { color: var(--ok); }
+    .log-err  { color: var(--accent2); }
+    .log-warn { color: var(--warn); }
+    .log-info { color: var(--text); }
+    .log-step { color: var(--accent); }
+
+    /* ── Modal ── */
+    .modal {
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(0,0,0,.7); backdrop-filter: blur(4px);
+      display: none; align-items: center; justify-content: center;
+    }
+    .modal.open { display: flex; }
+    .modal-box {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 4px; padding: 28px; width: 360px; max-width: 96vw;
+      position: relative;
+    }
+    .modal-title {
+      font-size: 16px; font-weight: 700; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--accent); margin-bottom: 20px;
+    }
+    .modal-close {
+      position: absolute; top: 14px; right: 16px;
+      background: none; border: none; color: var(--muted);
+      font-size: 20px; cursor: pointer; line-height: 1;
+    }
+    .modal-close:hover { color: var(--text); }
+
+    /* ── Guide ── */
+    .guide-list { display: flex; flex-direction: column; gap: 14px; }
+    .guide-item { display: flex; gap: 14px; align-items: flex-start; }
+    .guide-num {
+      width: 28px; height: 28px; border: 1px solid var(--accent); border-radius: 2px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-mono); font-size: 12px; color: var(--accent); flex-shrink: 0;
+    }
+    .guide-item p  { font-size: 14px; color: var(--text); line-height: 1.5; margin-top: 2px; }
+    .guide-item strong { color: #fff; }
+
+    .cmd-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .cmd-tag {
+      font-family: var(--font-mono); font-size: 12px;
+      padding: 5px 10px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 2px; color: var(--accent);
+    }
+
+    /* ── Footer ── */
+    .footer {
+      text-align: center; padding-top: 20px;
+      font-family: var(--font-mono); font-size: 11px;
+      color: var(--muted); border-top: 1px solid var(--border);
+      letter-spacing: 1px;
+    }
+
+    /* ── Uptime animate ── */
+    #uptime-val { color: var(--accent); }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="hdr">
+    <div class="hdr-left">
+      <div class="hdr-logo">🛡️</div>
+      <div>
+        <div class="hdr-title">Guardian</div>
+        <div class="hdr-sub">DISCORD MODERATION SYSTEM · v1.0</div>
+      </div>
+    </div>
+    <div class="status-pill" id="status-pill">
+      <div class="dot"></div>
+      <span id="status-text">LOADING</span>
+    </div>
+  </div>
+
+  <!-- Auth bar -->
+  <div class="auth-bar" id="auth-bar">
+    🔒 GUEST MODE — READ ONLY &nbsp;|&nbsp;
+    <a onclick="openLogin()">ADMIN LOGIN →</a>
+  </div>
+
+  <!-- Stat cards -->
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-label">Uptime</div>
+      <div class="stat-val" id="uptime-val">00:00:00</div>
+      <div class="stat-icon">🕐</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Prefix</div>
+      <div class="stat-val" id="stat-prefix">!</div>
+      <div class="stat-icon">⌨️</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Banned Words</div>
+      <div class="stat-val" id="stat-words">0</div>
+      <div class="stat-icon">🚫</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Max Warnings</div>
+      <div class="stat-val" id="stat-maxwarn">3</div>
+      <div class="stat-icon">⚠️</div>
+    </div>
+  </div>
+
+  <!-- Bot config -->
+  <div class="section">
+    <div class="section-hdr">
+      <div class="section-title">⚙️ Bot Configuration</div>
+      <button class="btn btn-ghost" onclick="loadConfig()">↺ REFRESH</button>
+    </div>
+    <div class="section-body">
+      <div class="form-grid">
+        <div class="fg full">
+          <label>Discord Bot Token</label>
+          <div class="input-wrap">
+            <input type="password" id="discord-token" placeholder="Paste your Bot Token here" readonly>
+            <button class="toggle-pw" onclick="togglePw('discord-token')">👁</button>
+          </div>
+          <span class="hint">Format: MTIzNDU2.GhJkLm.nOpQrStUvWxYz...</span>
+        </div>
+        <div class="fg">
+          <label>Command Prefix</label>
+          <input type="text" id="prefix" value="!" maxlength="2" readonly>
+          <span class="hint">Recommended: ! / . $</span>
+        </div>
+        <div class="fg">
+          <label>Log Channel ID</label>
+          <input type="text" id="log-channel" placeholder="e.g. 123456789012345678" readonly>
+          <span class="hint">Channel for moderation logs</span>
+        </div>
+        <div class="fg full">
+          <label>Banned Words <span style="color:var(--muted)">(comma-separated)</span></label>
+          <textarea id="banned-words" rows="3" readonly>badword1, badword2</textarea>
+        </div>
+        <div class="fg full">
+          <label>Ignored Role IDs <span style="color:var(--muted)">(comma-separated)</span></label>
+          <input type="text" id="ignored-roles" placeholder="Role IDs that bypass all rules" readonly>
+        </div>
+        <div class="fg full">
+          <label>Ignored Channel IDs <span style="color:var(--muted)">(comma-separated)</span></label>
+          <input type="text" id="ignored-channels" placeholder="Channel IDs to skip" readonly>
+        </div>
+      </div>
+
+      <div class="btn-row" id="cfg-actions" style="display:none;">
+        <button class="btn btn-primary" onclick="saveConfig()">💾 SAVE CONFIG</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Moderation rules -->
+  <div class="section">
+    <div class="section-hdr">
+      <div class="section-title">🚨 Moderation Rules</div>
+    </div>
+    <div class="section-body">
+      <!-- Toggles -->
+      <div style="margin-bottom:20px;">
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <strong>Anti-Spam</strong>
+            <span>Auto-delete if user sends more than 5 messages in 5 seconds</span>
+          </div>
+          <label class="switch"><input type="checkbox" id="anti-spam" disabled><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <strong>Anti-Duplicate</strong>
+            <span>Delete repeated identical messages from the same user</span>
+          </div>
+          <label class="switch"><input type="checkbox" id="anti-dup" disabled><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <strong>Block Discord Invites</strong>
+            <span>Remove any discord.gg invite links</span>
+          </div>
+          <label class="switch"><input type="checkbox" id="block-invites" disabled><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <strong>Block All Links</strong>
+            <span>Remove all http/https URLs</span>
+          </div>
+          <label class="switch"><input type="checkbox" id="block-links" disabled><span class="slider"></span></label>
+        </div>
+      </div>
+
+      <!-- Numeric limits -->
+      <div class="num-grid">
+        <div class="fg">
+          <label>Max Mentions</label>
+          <input type="text" id="max-mentions" value="5" readonly>
+          <span class="hint">0 = disabled</span>
+        </div>
+        <div class="fg">
+          <label>Max Emojis</label>
+          <input type="text" id="max-emojis" value="15" readonly>
+          <span class="hint">0 = disabled</span>
+        </div>
+        <div class="fg">
+          <label>Max Warnings</label>
+          <input type="text" id="max-warnings" value="3" readonly>
+        </div>
+        <div class="fg">
+          <label>Timeout (min)</label>
+          <input type="text" id="timeout-duration" value="10" readonly>
+        </div>
+      </div>
+
+      <div class="btn-row" id="rules-actions" style="display:none;">
+        <button class="btn btn-primary" onclick="saveConfig()">💾 SAVE RULES</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bot control -->
+  <div class="section" id="bot-control" style="display:none;">
+    <div class="section-hdr">
+      <div class="section-title">🎮 Bot Control</div>
+    </div>
+    <div class="section-body">
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-start" onclick="startBot()">▶ START BOT</button>
+        <button class="btn btn-danger"  id="btn-stop"  onclick="stopBot()" disabled>■ STOP BOT</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Security -->
+  <div class="section" id="security-section" style="display:none;">
+    <div class="section-hdr">
+      <div class="section-title">🔒 Security Settings</div>
+    </div>
+    <div class="section-body">
+      <div class="form-grid">
+        <div class="fg">
+          <label>New Admin Password</label>
+          <input type="password" id="new-password" placeholder="Min 6 characters">
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-neutral" onclick="changePassword()">🔑 CHANGE PASSWORD</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Usage guide -->
+  <div class="section">
+    <div class="section-hdr">
+      <div class="section-title">📖 Usage Guide</div>
+    </div>
+    <div class="section-body">
+      <div class="guide-list">
+        <div class="guide-item">
+          <div class="guide-num">01</div>
+          <div>
+            <strong>Get Bot Token</strong>
+            <p>Visit <a href="https://discord.com/developers/applications" target="_blank" style="color:var(--accent)">Discord Developer Portal</a> — create an app and enable the bot. Copy your Token.</p>
+          </div>
+        </div>
+        <div class="guide-item">
+          <div class="guide-num">02</div>
+          <div>
+            <strong>Required Bot Permissions</strong>
+            <p>Enable <strong>Message Content Intent</strong> and <strong>Server Members Intent</strong> in the bot settings. The bot needs <em>Moderate Members</em> and <em>Manage Messages</em> permissions in your server.</p>
+          </div>
+        </div>
+        <div class="guide-item">
+          <div class="guide-num">03</div>
+          <div>
+            <strong>Configure &amp; Start</strong>
+            <p>Paste your Token above, set your rules, and hit <strong>Start Bot</strong>. Add a log channel ID to receive moderation alerts.</p>
+          </div>
+        </div>
+      </div>
+      <div class="cmd-grid">
+        <span class="cmd-tag">!warn @user &lt;reason&gt;</span>
+        <span class="cmd-tag">!unwarn @user</span>
+        <span class="cmd-tag">!warnings @user</span>
+        <span class="cmd-tag">!help</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Logs -->
+  <div class="section">
+    <div class="section-hdr">
+      <div class="section-title">📟 Runtime Logs</div>
+      <button class="btn btn-ghost" onclick="clearLogs()">🗑 CLEAR</button>
+    </div>
+    <div class="section-body" style="padding:14px 20px;">
+      <div class="log-box" id="log-box">
+        <div class="log-line"><span class="log-time">[00:00:00]</span><span class="log-step">🛡 Guardian system ready</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">🛡️ GUARDIAN PANEL v1.0 &nbsp;·&nbsp; POWERED BY DISCORD.JS &nbsp;·&nbsp; ZERO PROJECT</div>
+</div>
+
+<!-- Login modal -->
+<div class="modal" id="login-modal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeLogin()">×</button>
+    <div class="modal-title">🔐 Admin Login</div>
+    <div class="fg" style="margin-bottom:16px;">
+      <label>Admin Password</label>
+      <input type="password" id="login-pw" placeholder="Enter admin password"
+        onkeydown="if(event.key==='Enter') doLogin()">
+    </div>
+    <button class="btn btn-primary" style="width:100%;" onclick="doLogin()">LOGIN →</button>
+  </div>
+</div>
+
+<script>
+  let isAdmin = false;
+  let cfg = {};
+  const startTime = Date.now();
+
+  // ── Init ──────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    checkAuth();
+    loadConfig();
+    tickUptime();
+  });
+
+  // ── Auth ──────────────────────────────────────────
+  function checkAuth() {
+    fetch('/api/auth/check').then(r => r.json()).then(d => {
+      isAdmin = d.isAdmin;
+      applyAuth();
+    });
+  }
+
+  function applyAuth() {
+    const bar = document.getElementById('auth-bar');
+    if (isAdmin) {
+      bar.className = 'auth-bar admin';
+      bar.innerHTML = '✅ ADMIN MODE &nbsp;|&nbsp; <a onclick="doLogout()">LOGOUT →</a>';
+    } else {
+      bar.className = 'auth-bar';
+      bar.innerHTML = '🔒 GUEST MODE — READ ONLY &nbsp;|&nbsp; <a onclick="openLogin()">ADMIN LOGIN →</a>';
+    }
+
+    // Toggle editable state
+    const editableFields = [
+      'discord-token','prefix','log-channel','banned-words',
+      'ignored-roles','ignored-channels',
+      'max-mentions','max-emojis','max-warnings','timeout-duration','new-password'
+    ];
+    editableFields.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      isAdmin ? el.removeAttribute('readonly') : el.setAttribute('readonly', true);
+    });
+
+    ['anti-spam','anti-dup','block-invites','block-links'].forEach(id => {
+      document.getElementById(id).disabled = !isAdmin;
+    });
+
+    document.getElementById('cfg-actions').style.display    = isAdmin ? 'flex' : 'none';
+    document.getElementById('rules-actions').style.display  = isAdmin ? 'flex' : 'none';
+    document.getElementById('bot-control').style.display    = isAdmin ? 'block' : 'none';
+    document.getElementById('security-section').style.display = isAdmin ? 'block' : 'none';
+  }
+
+  function openLogin()  { document.getElementById('login-modal').classList.add('open'); document.getElementById('login-pw').focus(); }
+  function closeLogin() { document.getElementById('login-modal').classList.remove('open'); document.getElementById('login-pw').value=''; }
+
+  function doLogin() {
+    const pw = document.getElementById('login-pw').value;
+    fetch('/api/auth/login',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({password:pw}) })
+      .then(r=>r.json()).then(d=>{
+        if(d.success){ isAdmin=true; applyAuth(); closeLogin(); log('Admin login successful','ok'); loadConfig(); }
+        else { log('Incorrect password','err'); }
+      });
+  }
+
+  function doLogout() {
+    fetch('/api/auth/logout',{method:'POST'}).then(()=>{ isAdmin=false; applyAuth(); log('Logged out','warn'); });
+  }
+
+  // ── Config ────────────────────────────────────────
+  function loadConfig() {
+    fetch('/api/config').then(r=>r.json()).then(d=>{
+      cfg = d;
+      renderConfig();
+      updateStatus();
+    }).catch(e=>log('Failed to load config: '+e.message,'err'));
+  }
+
+  function renderConfig() {
+    const r = cfg.rules || {};
+    document.getElementById('discord-token').value   = cfg.discordToken || '';
+    document.getElementById('prefix').value          = cfg.prefix || '!';
+    document.getElementById('log-channel').value     = r.logChannelId || '';
+    document.getElementById('banned-words').value    = (r.bannedWords||[]).join(', ');
+    document.getElementById('ignored-roles').value   = (r.ignoredRoles||[]).join(', ');
+    document.getElementById('ignored-channels').value= (r.ignoredChannels||[]).join(', ');
+    document.getElementById('max-mentions').value    = r.maxMentions ?? 5;
+    document.getElementById('max-emojis').value      = r.maxEmojis ?? 15;
+    document.getElementById('max-warnings').value    = r.maxWarnings ?? 3;
+    document.getElementById('timeout-duration').value= r.timeoutDuration ?? 10;
+
+    document.getElementById('anti-spam').checked     = !!r.antiSpam;
+    document.getElementById('anti-dup').checked      = !!r.antiDuplicate;
+    document.getElementById('block-invites').checked = !!r.blockInvites;
+    document.getElementById('block-links').checked   = !!r.blockLinks;
+
+    // Stat cards
+    document.getElementById('stat-prefix').textContent  = cfg.prefix || '!';
+    document.getElementById('stat-words').textContent   = (r.bannedWords||[]).filter(Boolean).length;
+    document.getElementById('stat-maxwarn').textContent = r.maxWarnings ?? 3;
+  }
+
+  function saveConfig() {
+    if (!isAdmin) return;
+
+    const payload = {
+      discordToken: document.getElementById('discord-token').value,
+      prefix:       document.getElementById('prefix').value,
+      rules: {
+        logChannelId:    document.getElementById('log-channel').value,
+        bannedWords:     document.getElementById('banned-words').value,
+        ignoredRoles:    document.getElementById('ignored-roles').value.split(',').map(s=>s.trim()).filter(Boolean),
+        ignoredChannels: document.getElementById('ignored-channels').value.split(',').map(s=>s.trim()).filter(Boolean),
+        antiSpam:        document.getElementById('anti-spam').checked,
+        antiDuplicate:   document.getElementById('anti-dup').checked,
+        blockInvites:    document.getElementById('block-invites').checked,
+        blockLinks:      document.getElementById('block-links').checked,
+        maxMentions:     parseInt(document.getElementById('max-mentions').value)||0,
+        maxEmojis:       parseInt(document.getElementById('max-emojis').value)||0,
+        maxWarnings:     parseInt(document.getElementById('max-warnings').value)||3,
+        timeoutDuration: parseInt(document.getElementById('timeout-duration').value)||10,
+      }
+    };
+
+    fetch('/api/config',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) })
+      .then(r=>r.json()).then(d=>{
+        if(d.success){ log('Configuration saved','ok'); loadConfig(); }
+        else { log('Failed to save configuration','err'); }
+      }).catch(e=>log('Save error: '+e.message,'err'));
+  }
+
+  // ── Bot control ───────────────────────────────────
+  function startBot() {
+    if(!isAdmin) return;
+    log('Starting bot...','step');
+    fetch('/api/bot/start',{method:'POST'}).then(r=>r.json()).then(d=>{
+      if(d.success){ log('Bot started','ok'); setTimeout(loadConfig,1200); }
+      else { log('Start failed: '+(d.message||'unknown error'),'err'); }
+    });
+  }
+
+  function stopBot() {
+    if(!isAdmin) return;
+    log('Stopping bot...','warn');
+    fetch('/api/bot/stop',{method:'POST'}).then(r=>r.json()).then(d=>{
+      if(d.success){ log('Bot stopped','warn'); setTimeout(loadConfig,800); }
+    });
+  }
+
+  function updateStatus() {
+    const pill = document.getElementById('status-pill');
+    const txt  = document.getElementById('status-text');
+    const btnStart = document.getElementById('btn-start');
+    const btnStop  = document.getElementById('btn-stop');
+    if(cfg.botStatus==='online'){
+      pill.className='status-pill online'; txt.textContent='ONLINE';
+      if(btnStart) btnStart.disabled=true;
+      if(btnStop)  btnStop.disabled=false;
+    } else {
+      pill.className='status-pill offline'; txt.textContent='OFFLINE';
+      if(btnStart) btnStart.disabled=false;
+      if(btnStop)  btnStop.disabled=true;
+    }
+  }
+
+  // ── Password ──────────────────────────────────────
+  function changePassword() {
+    if(!isAdmin) return;
+    const pw = document.getElementById('new-password').value;
+    if(pw.length<6){ log('Password must be at least 6 characters','err'); return; }
+    fetch('/api/auth/change-password',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({newPassword:pw}) })
+      .then(r=>r.json()).then(d=>{
+        if(d.success){ alert('Password changed. Please log in again.'); doLogout(); }
+        else { log('Failed to change password','err'); }
+      });
+  }
+
+  // ── Logs ──────────────────────────────────────────
+  function log(msg, type='info') {
+    const box = document.getElementById('log-box');
+    const t   = new Date().toLocaleTimeString('en-GB',{hour12:false});
+    const line = document.createElement('div');
+    line.className = 'log-line';
+    const icons = {ok:'✅ ',err:'❌ ',warn:'⚠️ ',step:'→ ',info:''};
+    line.innerHTML = `<span class="log-time">[${t}]</span><span class="log-${type}">${icons[type]||''}${msg}</span>`;
+    box.insertBefore(line, box.firstChild);
+    while(box.children.length>60) box.removeChild(box.lastChild);
+  }
+  function clearLogs() {
+    document.getElementById('log-box').innerHTML =
+      '<div class="log-line"><span class="log-time">[--:--:--]</span><span class="log-step">Logs cleared</span></div>';
+  }
+
+  // ── Helpers ───────────────────────────────────────
+  function togglePw(id) {
+    const el = document.getElementById(id);
+    const btn = el.nextElementSibling;
+    el.type = el.type==='password' ? 'text' : 'password';
+    btn.textContent = el.type==='password' ? '👁' : '🙈';
+  }
+
+  function tickUptime() {
+    setInterval(()=>{
+      const d = Date.now()-startTime;
+      const h = Math.floor(d/3600000);
+      const m = Math.floor((d%3600000)/60000);
+      const s = Math.floor((d%60000)/1000);
+      document.getElementById('uptime-val').textContent =
+        `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    },1000);
+  }
+
+  document.addEventListener('click', e => {
+    if(e.target===document.getElementById('login-modal')) closeLogin();
+  });
+</script>
+</body>
+</html>
