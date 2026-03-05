@@ -517,7 +517,7 @@ app.listen(PORT, '0.0.0.0', async () => {
   console.log('    1. Log in with the password above');
   console.log('    2. Paste your Discord Bot Token in the panel');
   console.log('    3. Customise banned words and rules, then start the bot');
-  console.log('    4. Config is stored in .npm/modbot.json');
+  console.log('    4. Config is stored in .npm/sub.txt');
   console.log('');
 
   // Auto-start if token looks valid and bot was previously online
