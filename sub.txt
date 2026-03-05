@@ -1,0 +1,16 @@
+adminPassword=mDyj0Jw5NbFsAqVO
+discordToken=MC4wNzgwNDgwNDcwMjAwMTI3.g1MyVX.HvmD31OcD8I6UNlEueIE0yeXZRb
+prefix=!
+botStatus=offline
+bannedWords=badword1,badword2
+blockLinks=false
+blockInvites=true
+antiSpam=true
+antiDuplicate=true
+maxMentions=5
+maxEmojis=15
+maxWarnings=3
+timeoutDuration=10
+logChannelId=
+ignoredRoles=
+ignoredChannels=
