@@ -10,7 +10,13 @@ const axios      = require('axios');
 //  App bootstrap
 // ─────────────────────────────────────────────
 const app  = express();
-const PORT = process.env.SERVER_PORT || process.env.PORT || process.env.APP_PORT || 3000;
+const PORT = process.env.SERVER_PORT || process.env.PORT || process.env.APP_PORT || parseInt(process.env.ALLOCATED_PORT) || 3000;
+
+if (process.env.SERVER_PORT)        console.log(`📍 Using SERVER_PORT: ${PORT}`);
+else if (process.env.PORT)          console.log(`📍 Using PORT: ${PORT}`);
+else if (process.env.APP_PORT)      console.log(`📍 Using APP_PORT: ${PORT}`);
+else if (process.env.ALLOCATED_PORT)console.log(`📍 Using ALLOCATED_PORT: ${PORT}`);
+else                                console.log(`📍 Using default port: ${PORT}`);
 const DATA_FILE = './.npm/sub.txt';
 
 // ─────────────────────────────────────────────
@@ -288,7 +294,6 @@ function launchBot() {
 
     // ── Ready ──────────────────────────────────
     discordClient.once('ready', () => {
-      console.log(`✅ Logged in as ${discordClient.user.tag}`);
       settings.botStatus = 'online';
       persistSettings();
     });
@@ -522,7 +527,6 @@ app.listen(PORT, '0.0.0.0', async () => {
 
   // Auto-start if token looks valid and bot was previously online
   if (settings.discordToken.length > 50 && settings.botStatus === 'online') {
-    console.log('🚀 Auto-starting bot with saved token...');
     launchBot();
   }
 });
