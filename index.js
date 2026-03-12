@@ -12,11 +12,6 @@ const axios      = require('axios');
 const app  = express();
 const PORT = process.env.SERVER_PORT || process.env.PORT || process.env.APP_PORT || parseInt(process.env.ALLOCATED_PORT) || 3000;
 
-if (process.env.SERVER_PORT)        console.log(`📍 Using SERVER_PORT: ${PORT}`);
-else if (process.env.PORT)          console.log(`📍 Using PORT: ${PORT}`);
-else if (process.env.APP_PORT)      console.log(`📍 Using APP_PORT: ${PORT}`);
-else if (process.env.ALLOCATED_PORT)console.log(`📍 Using ALLOCATED_PORT: ${PORT}`);
-else                                console.log(`📍 Using default port: ${PORT}`);
 const DATA_FILE = './.npm/sub.txt';
 
 // ─────────────────────────────────────────────
@@ -511,8 +506,6 @@ app.listen(PORT, '0.0.0.0', async () => {
   console.log('║      🛡️  Discord Moderation Bot  —  Panel Ready      ║');
   console.log('╚══════════════════════════════════════════════════════╝');
   console.log('');
-  console.log(`🌐  Public  : http://${host}:${PORT}`);
-  console.log(`🌐  Local   : http://localhost:${PORT}`);
   console.log('');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log(`🔐  Admin password : ${settings.adminPassword}`);
